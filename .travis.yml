@@ -1,0 +1,19 @@
+language: scala
+
+scala:
+  - 2.11.8
+  - 2.12.1
+
+jdk:
+  - oraclejdk8
+
+sudo: false
+
+cache:
+  directories:
+    - $HOME/.ivy2
+    - $HOME/.sbt
+
+script:
+  - sbt ++$TRAVIS_SCALA_VERSION -Dfile.encoding=UTF8 test mimaReportBinaryIssues
+
