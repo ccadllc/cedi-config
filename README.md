@@ -197,7 +197,7 @@ val failed = serverSettingsParser.parse(ConfigFactory.parseString("""endpoint: "
 
 ### <a id="getit"></a>How to get latest Version
 
-Cedi Config supports Scala 2.10, 2.11, and 2.12. It will be published to Maven Central soon.
+Cedi Config supports Scala 2.11 and 2.12. It will be published to Maven Central soon.
 
 ```scala
 libraryDependencies += "com.ccadllc.cedi" %% "config" % "1.0.0"
