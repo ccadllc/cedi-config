@@ -4,6 +4,7 @@ Quick links:
 
 - [About the library](#about)
 - [How to get latest version](#getit)
+- [API Docs](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/config_2.12/1.0.0/config_2.12-1.0.0-javadoc.jar/!/com/ccadllc/cedi/config/index.html)
 
 ### <a id="about"></a>About the library
 
