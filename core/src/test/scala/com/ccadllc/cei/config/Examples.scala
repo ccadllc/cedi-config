@@ -15,27 +15,54 @@
  */
 package com.ccadllc.cedi.config
 
-object Examples {
+import com.typesafe.config.ConfigFactory
 
-  import scala.concurrent.duration.FiniteDuration
-  import com.typesafe.config.ConfigFactory
+object Examples extends App {
 
-  case class CacheSettings(maxEntries: Int, ttl: Option[FiniteDuration])
+  sealed trait Connector { val port: Int }
+  case class HttpConnector(port: Int) extends Connector
+  case class HttpsConnector(port: Int, clientAuthType: Option[ClientAuthType]) extends Connector
 
-  val parserDerived: ConfigParser[CacheSettings] = ConfigParser.derived[CacheSettings]
+  sealed trait ClientAuthType
+  object ClientAuthType {
+    case object Want extends ClientAuthType
+    case object Need extends ClientAuthType
 
-  val parsedDerived: Either[ConfigErrors, CacheSettings] = parserDerived.parse(ConfigFactory.parseString(
-    """|max-entries: 1000
-       |ttl: 10 seconds
-       |""".stripMargin
+    def fromString(s: String): Option[ClientAuthType] =
+      s.toLowerCase match {
+        case "want" => Some(Want)
+        case "need" => Some(Need)
+        case _ => None
+      }
+  }
+
+  val connectorsParser: ConfigParser[List[Connector]] = {
+    val connectorParser: ConfigParser[Connector] = {
+      ConfigParser.string("type").bind {
+        case "http" =>
+          ConfigParser.int("port").map { p => HttpConnector(p) }
+        case "https" =>
+          val clientAuthTypeParser: ConfigParser[ClientAuthType] =
+            ConfigParser.fromString("client-auth")(ClientAuthType.fromString(_).toRight("Must be either 'want' or 'need'"))
+          (ConfigParser.int("port") ~ clientAuthTypeParser.optional).map { case (p, cat) => HttpsConnector(p, cat) }
+      }
+    }
+    ConfigParser.list("connectors")(connectorParser)
+  }
+
+  val result = connectorsParser.parse(ConfigFactory.parseString(
+    """|connectors: [
+       |  {
+       |    type: http
+       |    port: 80
+       |  },
+       |  {
+       |    type: https
+       |    port: 443
+       |    client-auth: want
+       |  }
+       |]""".stripMargin
   ))
 
-  println(parsedDerived)
-
-  val parserManual: ConfigParser[CacheSettings] =
-    (ConfigParser.int("max-entries") ~ ConfigParser.duration("ttl").optional).map {
-      case (maxEntries, ttl) =>
-        CacheSettings(maxEntries, ttl)
-    }
-
+  println(result)
 }
