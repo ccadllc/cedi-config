@@ -207,4 +207,3 @@ libraryDependencies += "com.ccadllc.cedi" %% "config" % "1.0.0"
 ## Copyright and License
 
 This project is made available under the [Apache License, Version 2.0](LICENSE). Copyright information can be found in [NOTICE](NOTICE).
-
