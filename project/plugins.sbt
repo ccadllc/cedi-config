@@ -1,4 +1,4 @@
 resolvers += Resolver.sonatypeRepo("public")
 
-addSbtPlugin("com.ccadllc.cedi" %% "build" % "1.0.1")
+addSbtPlugin("com.ccadllc.cedi" %% "build" % "1.0.3")
 
