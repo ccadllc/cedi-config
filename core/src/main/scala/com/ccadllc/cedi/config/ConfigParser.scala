@@ -19,7 +19,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 
 import com.typesafe.config.{ Config, ConfigException, ConfigFactory, ConfigMemorySize, ConfigValue }
-import shapeless.{ ::, HList, HNil, Generic, LabelledGeneric, Typeable }
+import shapeless.{ ::, HList, HNil, Generic, LabelledGeneric, Lazy, Typeable }
 
 /**
  * Parses a value of type `A` from a Typesafe `Config` object.
@@ -664,8 +664,8 @@ object ConfigParser {
 
     implicit def hcons[K <: Symbol, V, T <: HList](implicit
       headKey: Witness.Aux[K],
-      headParser: DerivedConfigFieldParser[V],
-      tailParser: DerivedConfigParser[T]): DerivedConfigParser[FieldType[K, V] :: T] = {
+      headParser: Lazy[DerivedConfigFieldParser[V]],
+      tailParser: Lazy[DerivedConfigParser[T]]): DerivedConfigParser[FieldType[K, V] :: T] = {
       DerivedConfigParser[FieldType[K, V] :: T]({
         val configKey: String = {
           val raw = headKey.value.name
@@ -683,7 +683,7 @@ object ConfigParser {
           }
           str.toString
         }
-        headParser(configKey).mapPreservingToString(field[K](_)) :: tailParser.parser
+        headParser.value(configKey).mapPreservingToString(field[K](_)) :: tailParser.value.parser
       })
     }
 
@@ -703,6 +703,12 @@ object ConfigParser {
     implicit def fromImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[A] = DerivedConfigFieldParser(key => subconfig(key)(instance))
     implicit def fromListImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[List[A]] = DerivedConfigFieldParser(key => list(key)(instance))
     implicit def fromVectorImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[Vector[A]] = DerivedConfigFieldParser(key => vector(key)(instance))
+    implicit def fromImplicitDerivedConfigParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[A] =
+      DerivedConfigFieldParser(key ⇒ subconfig(key)(parser.value.parser.as[A]))
+    implicit def fromListImplicitGenericDerivedParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[List[A]] =
+      DerivedConfigFieldParser(key ⇒ list(key)(parser.value.parser.as[A]))
+    implicit def fromVectorImplicitGenericDerivedParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[Vector[A]] =
+      DerivedConfigFieldParser(key => vector(key)(parser.value.parser.as[A]))
   }
 
   /** Supports [[ConfigParser.derived]]. */
