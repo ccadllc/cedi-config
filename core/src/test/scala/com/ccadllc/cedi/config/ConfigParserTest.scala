@@ -132,7 +132,7 @@ class ConfigParserTest extends WordSpec with Matchers {
     "support marking keys in error messages non-relative" in {
       val p = ConfigParser.ask.bind { root =>
         ConfigParser.subconfig("foo", failFast = false) {
-          (ConfigParser.int("bar") ~ ConfigParser.anonymous { _ => ConfigParser.int("baz").withAbsoluteErrorKeys.parse(root) })
+          ConfigParser.int("bar") ~ ConfigParser.anonymous { _ => ConfigParser.int("baz").withAbsoluteErrorKeys.parse(root) }
         }
       }
       p.parse(config()) shouldBe Left(ConfigErrors.of(
@@ -160,7 +160,6 @@ class ConfigParserTest extends WordSpec with Matchers {
         case class ServerSettings(server: AddressAndPort, path: String, timeout: Option[FiniteDuration])
         case class AppSettings(connections: List[ServerSettings], id: Int)
 
-        implicit val serverSettingsParser: ConfigParser[ServerSettings] = ConfigParser.derived[ServerSettings]
         val appSettingsParser: ConfigParser[AppSettings] = ConfigParser.derived[AppSettings]
 
         appSettingsParser.parse(ConfigFactory.parseString(
@@ -198,6 +197,30 @@ class ConfigParserTest extends WordSpec with Matchers {
             ConfigError.Missing(ConfigKey.Relative("connections[0].path")),
             ConfigError.WrongType(ConfigKey.Relative("id"), "expected int", Some(ConfigOriginFactory.newSimple("String").withLineNumber(2)))
           ))
+      }
+
+      "supports full derivation of nested case classes" in {
+        case class Wobble(string: String)
+        case class Both(wibbles: Vector[Wibble], wobbles: Option[Wobble])
+
+        val bothParser = ConfigParser.derived[Both]
+
+        bothParser.parse(
+          ConfigFactory.parseString(
+            """wibbles: [
+              |  {
+              |    count= 7
+              |    name = "hello"
+              |  },
+              |  {
+              |    count= 6
+              |    name = world
+              |  }
+              |]
+              |wobbles.string = "goodbye"
+            """.stripMargin
+          )
+        ) shouldBe Right(Both(Vector(Wibble("hello", 7), Wibble("world", 6)), Some(Wobble("goodbye"))))
       }
     }
   }
