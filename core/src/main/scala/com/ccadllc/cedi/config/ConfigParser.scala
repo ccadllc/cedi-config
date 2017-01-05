@@ -219,7 +219,7 @@ object ConfigParser {
    * Summons the `ConfigParser` in implicit scope.  A convenience for the equivalent
    * `implicitly[ConfigParser[A]]`.
    * @param cp the `ConfigParser` in implicit scope.
-   * @return config parser in implicit scope,
+   * @return config parser in implicit scope
    */
   def apply[A](implicit cp: ConfigParser[A]): ConfigParser[A] = cp
 
