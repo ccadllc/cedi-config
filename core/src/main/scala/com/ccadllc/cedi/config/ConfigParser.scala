@@ -699,16 +699,19 @@ object ConfigParser {
       DerivedConfigFieldParser[B](key => self.apply(key).map(f))
   }
 
-  private[config] sealed trait DerivedConfigFieldParserLowPriority {
-    implicit def fromImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[A] = DerivedConfigFieldParser(key => subconfig(key)(instance))
-    implicit def fromListImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[List[A]] = DerivedConfigFieldParser(key => list(key)(instance))
-    implicit def fromVectorImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[Vector[A]] = DerivedConfigFieldParser(key => vector(key)(instance))
+  private[config] sealed trait DerivedConfigFieldParserLowPriority0 {
     implicit def fromImplicitDerivedConfigParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[A] =
       DerivedConfigFieldParser(key ⇒ subconfig(key)(parser.value.parser.as[A]))
     implicit def fromListImplicitGenericDerivedParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[List[A]] =
       DerivedConfigFieldParser(key ⇒ list(key)(parser.value.parser.as[A]))
     implicit def fromVectorImplicitGenericDerivedParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[Vector[A]] =
       DerivedConfigFieldParser(key => vector(key)(parser.value.parser.as[A]))
+  }
+
+  private[config] sealed trait DerivedConfigFieldParserLowPriority extends DerivedConfigFieldParserLowPriority0 {
+    implicit def fromImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[A] = DerivedConfigFieldParser(key => subconfig(key)(instance))
+    implicit def fromListImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[List[A]] = DerivedConfigFieldParser(key => list(key)(instance))
+    implicit def fromVectorImplicitParser[A](implicit instance: ConfigParser[A]): DerivedConfigFieldParser[Vector[A]] = DerivedConfigFieldParser(key => vector(key)(instance))
   }
 
   /** Supports [[ConfigParser.derived]]. */

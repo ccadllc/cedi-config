@@ -29,4 +29,9 @@ object CompilationTest {
   case class Qux(foo: String, bar: Int, baz: Boolean)
   val e: ConfigParser[Qux] = d.as[Qux]
   val f: ConfigParser[Qux] = subconfig("a.b.c") { derived[Qux] }
+
+  case class Quux(a: Qux, b: Qux)
+  // Ensures an implicit ConfigParser[Qux] doesn't conflict with deriving a Qux parser
+  implicit def quxParser: ConfigParser[Qux] = ???
+  val g: ConfigParser[Quux] = derived[Quux]
 }
