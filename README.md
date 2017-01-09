@@ -196,6 +196,34 @@ val failed = serverSettingsParser.parse(ConfigFactory.parseString("""endpoint: "
 //   Bad value for key endpoint - must be address:port (String: 1).
 ```
 
+Configuration parsers can be derived for abstract data types as well. Consider this example:
+
+```scala
+sealed trait Connector { def port: Int }
+// defined trait Connector
+
+case class HttpConnector(port: Int) extends Connector
+// defined class HttpConnector
+
+case class HttpsConnector(port: Int, sslContextName: String) extends Connector
+// defined class HttpsConnector
+
+val connectorParser: ConfigParser[Connector] = ConfigParser.derived[Connector]
+// connectorParser: com.ccadllc.cedi.config.ConfigParser[Connector] = string("type").optional.bind(<function>)
+
+parser.parse(ConfigFactory.parseString(
+  """|type: https-connector
+     |port: 8080
+     |ssl-context-name: default
+     |""".stripMargin)
+```
+
+The `Connector` ADT has two data constructors -- `HttpConnector` and `HttpsConnector`. The derived parser first reads the `type` key to determine how the rest of the configuration should be parsed. The valid values for the `type` key are the names of the data constructors converted to `lower-case-with-dashes` format.
+
+If the `type` key is omitted, the parser for each data constructor is attempted in turn until one succeeds. If no parsers succeed, an error is returned indicating the `type` key is missing.
+
+The `type` field acts as a *discriminator* -- a value used to determine which data constructor should be parsed. If necessary, the name of the discriminator can be changed from `type` to something else by defining an implicit `DiscriminatorKey[X]` for ADT `X`. Similarly, to customize the *values* of the discriminator field, an implicit `DiscriminatorValue[Y]` can be defined for each data constructor `Y`.
+
 ### <a id="getit"></a>How to get latest Version
 
 Cedi Config supports Scala 2.11 and 2.12. It is published to Maven Central.
