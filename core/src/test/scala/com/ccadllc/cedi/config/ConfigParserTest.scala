@@ -222,6 +222,66 @@ class ConfigParserTest extends WordSpec with Matchers {
           )
         ) shouldBe Right(Both(Vector(Wibble("hello", 7), Wibble("world", 6)), Some(Wobble("goodbye"))))
       }
+
+      "supports derivation of ADTs" which {
+        "parses subtypes based on 'type' key" in {
+          sealed trait Connector { def port: Int }
+          case class HttpConnector(port: Int) extends Connector
+          case class HttpsConnector(port: Int, sslContextName: String) extends Connector
+
+          val parser: ConfigParser[Connector] = ConfigParser.derived[Connector]
+          parser.parse(
+            ConfigFactory.parseString(
+              """|type: http-connector
+                 |port: 8080
+                 |""".stripMargin
+            )
+          ) shouldBe Right(HttpConnector(8080))
+          parser.parse(
+            ConfigFactory.parseString(
+              """|type: https-connector
+                 |port: 8080
+                 |ssl-context-name: default
+                 |""".stripMargin
+            )
+          ) shouldBe Right(HttpsConnector(8080, "default"))
+        }
+
+        "tries each subtype parser in succession when type is unspecified" in {
+          sealed trait Parent
+          case class Foo(foo: Int) extends Parent
+          case class Bar(bar: Int) extends Parent
+
+          val parser: ConfigParser[Parent] = ConfigParser.derived[Parent]
+          parser.parse(ConfigFactory.parseString("foo: 8080")) shouldBe Right(Foo(8080))
+          parser.parse(ConfigFactory.parseString("bar: 8080")) shouldBe Right(Bar(8080))
+          parser.parse(ConfigFactory.parseString("")) shouldBe Left(ConfigErrors.of(ConfigError.Missing(ConfigKey.Relative("type"))))
+        }
+
+        "allows discriminator key to be customized on a per-ADT basis" in {
+          sealed trait Parent
+          object Parent { implicit val key: ConfigParser.DiscriminatorKey[Parent] = ConfigParser.DiscriminatorKey("ptype") }
+          case class Foo(foo: Int) extends Parent
+          case class Bar(bar: Int) extends Parent
+
+          val parser: ConfigParser[Parent] = ConfigParser.derived[Parent]
+          parser.parse(ConfigFactory.parseString("ptype: foo, foo: 8080")) shouldBe Right(Foo(8080))
+          parser.parse(ConfigFactory.parseString("ptype: bar, bar: 8080")) shouldBe Right(Bar(8080))
+          parser.parse(ConfigFactory.parseString("")) shouldBe Left(ConfigErrors.of(ConfigError.Missing(ConfigKey.Relative("ptype"))))
+        }
+
+        "allows discriminator value to be customized on a per-class basis" in {
+          sealed trait Parent
+          case class Foo(foo: Int) extends Parent
+          implicit val fooValue: ConfigParser.DiscriminatorValue[Foo] = ConfigParser.DiscriminatorValue("f")
+          case class Bar(bar: Int) extends Parent
+          implicit val barValue: ConfigParser.DiscriminatorValue[Bar] = ConfigParser.DiscriminatorValue("b")
+
+          val parser: ConfigParser[Parent] = ConfigParser.derived[Parent]
+          parser.parse(ConfigFactory.parseString("type: f, foo: 8080")) shouldBe Right(Foo(8080))
+          parser.parse(ConfigFactory.parseString("type: b, bar: 8080")) shouldBe Right(Bar(8080))
+        }
+      }
     }
   }
 

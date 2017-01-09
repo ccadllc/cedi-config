@@ -650,6 +650,22 @@ object ConfigParser {
    */
   def derived[A](implicit d: DerivedConfigParser[A]): ConfigParser[A] = d.parser
 
+  private def toKey(raw: String): String = {
+    val str = new StringBuilder
+    var lastLower = false
+    raw.foreach { c =>
+      if (c.isLower) {
+        lastLower = true
+        str += c
+      } else {
+        if (lastLower) str += '-'
+        lastLower = false
+        str += c.toLower
+      }
+    }
+    str.toString
+  }
+
   /** Supports [[ConfigParser.derived]]. */
   @annotation.implicitNotFound("""Could not derive a ConfigParser[${A}] - ensure there is an implicit ConfigParser[x] in scope for each component type x of ${A}.""")
   final case class DerivedConfigParser[A](parser: ConfigParser[A])
@@ -667,28 +683,109 @@ object ConfigParser {
       headParser: Lazy[DerivedConfigFieldParser[V]],
       tailParser: Lazy[DerivedConfigParser[T]]): DerivedConfigParser[FieldType[K, V] :: T] = {
       DerivedConfigParser[FieldType[K, V] :: T]({
-        val configKey: String = {
-          val raw = headKey.value.name
-          val str = new StringBuilder
-          var lastLower = true
-          raw.foreach { c =>
-            if (c.isLower) {
-              lastLower = true
-              str += c
-            } else {
-              if (lastLower) str += '-'
-              lastLower = false
-              str += c.toLower
-            }
-          }
-          str.toString
-        }
+        val configKey = toKey(headKey.value.name)
         headParser.value(configKey).mapPreservingToString(field[K](_)) :: tailParser.value.parser
       })
     }
 
     implicit def lgeneric[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], reprParser: DerivedConfigParser[Repr]): DerivedConfigParser[A] = {
       DerivedConfigParser[A](reprParser.parser.as[A])
+    }
+
+    implicit def lgenericDiscriminating[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], reprParser: DiscriminatingConfigParser[Repr], discriminatorKey: DiscriminatorKey[A]): DerivedConfigParser[A] = {
+      val key = discriminatorKey.key
+      DerivedConfigParser[A](
+        ConfigParser.string(key).optional.bind { discriminatorValue =>
+          reprParser(discriminatorValue) match {
+            case Some(parser) =>
+              val p = parser.as[A]
+              // If we fail to parse & we don't have a discriminator, report the error as a missing discriminator, since we don't know the right case was selected
+              if (discriminatorValue.isDefined) p
+              else p or ConfigParser.anonymous { _ => Left(ConfigErrors.of(ConfigError.Missing(ConfigKey.Relative(key)))) }
+            case None =>
+              val err = discriminatorValue match {
+                case Some(discriminator) => ConfigError.BadValue(ConfigKey.Relative(key), s"Unsupported: $discriminator", None)
+                case None => ConfigError.Missing(ConfigKey.Relative(key))
+              }
+              ConfigParser.anonymous { _ => Left(ConfigErrors.of(err)) }
+          }
+        }
+      )
+    }
+  }
+
+  /** Supports [[ConfigParser.derived]]. */
+  sealed trait DiscriminatingConfigParser[A] {
+    def apply(discriminatorValue: Option[String]): Option[ConfigParser[A]]
+  }
+
+  /** Companion for [[DiscriminatingConfigParser]]. */
+  object DiscriminatingConfigParser {
+    import shapeless._
+    import shapeless.labelled._
+
+    implicit val cnil: DiscriminatingConfigParser[CNil] = new DiscriminatingConfigParser[CNil] {
+      def apply(discriminatorValue: Option[String]): Option[ConfigParser[CNil]] = None
+    }
+
+    implicit def coproduct[K <: Symbol, V, T <: Coproduct](implicit
+      headKey: Witness.Aux[K],
+      headDiscriminatorValue: DiscriminatorValue[V],
+      headParser: Lazy[DerivedConfigParser[V]],
+      tailParser: Lazy[DiscriminatingConfigParser[T]]): DiscriminatingConfigParser[FieldType[K, V] :+: T] = {
+      new DiscriminatingConfigParser[FieldType[K, V] :+: T] {
+        def apply(discriminatorValue: Option[String]): Option[ConfigParser[FieldType[K, V] :+: T]] = {
+          val inlParser: ConfigParser[FieldType[K, V] :+: T] = headParser.value.parser.map(x => Inl(field[K](x)))
+          lazy val inrParser: Option[ConfigParser[FieldType[K, V] :+: T]] = {
+            val foo: Option[ConfigParser[T]] = tailParser.value.apply(discriminatorValue)
+            foo.map(tail => tail.map((x: T) => Inr(x)))
+          }
+          discriminatorValue match {
+            case Some(discriminator) =>
+              if (discriminator == headDiscriminatorValue(headKey.value)) Some(inlParser)
+              else inrParser
+
+            case None =>
+              Some(ConfigParser(s"($inlParser :+: $inrParser)") { cfg =>
+                inlParser.parse(cfg).left.flatMap { errs =>
+                  inrParser.flatMap { _.parse(cfg).right.toOption }.toRight(errs)
+                }
+              })
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Specifies the configuration key used to discriminate between data constructors of an abstract data type.
+   *
+   * Defaults to `type` but can be specified on a per-type basis by declaring an implicit `DiscriminatorKey[T]`
+   * in the companion object of `T`.
+   */
+  case class DiscriminatorKey[A](key: String)
+
+  /** Companion for [[DiscriminatorKey]]. */
+  object DiscriminatorKey {
+    implicit def default[A]: DiscriminatorKey[A] = DiscriminatorKey("type")
+  }
+
+  /**
+   * Specifies the value of the discriminator key for type `A`.
+   */
+  sealed trait DiscriminatorValue[A] {
+    /** Given the name of the data constructor class `A` as a symbol, returns the value of the discriminator for type `A`. */
+    def apply(tpe: Symbol): String
+  }
+
+  /** Companion for [[DiscriminatorValue]]. */
+  object DiscriminatorValue {
+    /** Constructs a discriminator value that always returns the supplied value. */
+    def apply[A](value: String) = new DiscriminatorValue[A] { def apply(tpe: Symbol) = value }
+
+    /** Discriminator value that uses the name of the data constructor class, converted to lower-case-with-dashes format. */
+    implicit def default[A]: DiscriminatorValue[A] = new DiscriminatorValue[A] {
+      def apply(tpe: Symbol) = toKey(tpe.name)
     }
   }
 
