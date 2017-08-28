@@ -325,6 +325,24 @@ object ConfigParser {
   def pure[A](a: A): ConfigParser[A] = ConfigParser(s"pure($a)") { _ => Right(a) }
 
   /**
+   * Creates a parser that ignores the `Config` object and always returns the supplied error.
+   *
+   * @param error the error to be returned
+   * @return a failed parser
+   */
+  def failed(error: ConfigError): ConfigParser[Nothing] =
+    ConfigParser("failed") { _ => Left(ConfigErrors.of(error)) }
+
+  /**
+    * Creates a parser that ignores the `Config` object and always returns the supplied error list.
+    *
+    * @param errors the errors to be returned
+    * @return a failed parser
+    */
+  def failed(errors: ConfigErrors): ConfigParser[Nothing] =
+    ConfigParser("failed") { _ => Left(errors) }
+
+  /**
    * Creates a parser that parses the the supplied key as a string (via `cfg.getString(key)`).
    *
    * @param key config key of the value to parse
