@@ -15,6 +15,7 @@ lazy val core = project.in(file("core")).enablePlugins(SbtOsgi).
     libraryDependencies ++= Seq(
       "com.typesafe" % "config" % "1.3.0",
       "com.chuusai" %% "shapeless" % "2.3.2",
+      "org.typelevel" %% "cats-core" % "1.0.0-MF",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     ),
     buildOsgiBundle("com.ccadllc.cedi.config")
