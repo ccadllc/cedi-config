@@ -19,7 +19,8 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 
 import com.typesafe.config.{ Config, ConfigException, ConfigFactory, ConfigMemorySize, ConfigValue }
-import shapeless.{ ::, HList, HNil, Generic, LabelledGeneric, Lazy, Typeable }
+import cats.data._
+import shapeless.{ :: => #:, HList, HNil, Generic, LabelledGeneric, Lazy, Typeable }
 
 /**
  * Parses a value of type `A` from a Typesafe `Config` object.
@@ -334,11 +335,11 @@ object ConfigParser {
     ConfigParser("failed") { _ => Left(ConfigErrors.of(error)) }
 
   /**
-    * Creates a parser that ignores the `Config` object and always returns the supplied error list.
-    *
-    * @param errors the errors to be returned
-    * @return a failed parser
-    */
+   * Creates a parser that ignores the `Config` object and always returns the supplied error list.
+   *
+   * @param errors the errors to be returned
+   * @return a failed parser
+   */
   def failed(errors: ConfigErrors): ConfigParser[Nothing] =
     ConfigParser("failed") { _ => Left(errors) }
 
@@ -499,6 +500,22 @@ object ConfigParser {
     }
 
   /**
+   * Like [[list]] but ensures a `NonEmptyList`.
+   *
+   * Warning: errors may not be collected for the full list
+   *
+   * @param key config key of the config list to parse
+   * @param cpl provides a config parser to use to parse each config element of the config list, for a given key
+   * @return new parser
+   */
+  def nonEmptyList[A](key: String)(cpl: String => ConfigParser[List[A]]): ConfigParser[NonEmptyList[A]] = cpl(key) bind {
+    case head :: tail => ConfigParser.pure(NonEmptyList(head, tail))
+    case Nil => ConfigParser(s"non-empty-list failure for $key") { _ =>
+      Left(ConfigErrors.of(ConfigError.WrongType(ConfigKey.Relative(key), "expected non-empty list", None)))
+    }
+  }
+
+  /**
    * Like [[list]] but returns results as a `Vector` instead of a `List`.
    *
    * @param key config key of the config list to parse
@@ -506,6 +523,22 @@ object ConfigParser {
    * @return new parser
    */
   def vector[A](key: String)(cp: ConfigParser[A]): ConfigParser[Vector[A]] = list(key)(cp).map(_.toVector)
+
+  /**
+   * Like [[vector]] but ensures a `NonEmptyVector`.
+   *
+   * Warning: errors may not be collected for the full vector
+   *
+   * @param key config key of the config vector to parse
+   * @param cpl provides a config parser to use to parse each config element of the config vector, for a given key
+   * @return new parser
+   */
+  def nonEmptyVector[A](key: String)(cpv: String => ConfigParser[Vector[A]]): ConfigParser[NonEmptyVector[A]] = cpv(key) bind {
+    case Vector() => ConfigParser(s"non-empty-vector failure for $key") { _ =>
+      Left(ConfigErrors.of(ConfigError.WrongType(ConfigKey.Relative(key), "expected non-empty vector", None)))
+    }
+    case v => ConfigParser.pure(NonEmptyVector(v.head, v.tail))
+  }
 
   private def doGet[A](key: String, tpe: String)(get: Config => A): ConfigParser[A] = {
     val k = ConfigKey.Relative(key)
@@ -588,7 +621,7 @@ object ConfigParser {
      * @param that element parser to extend with
      * @return new parser
      */
-    def ::[A](that: ConfigParser[A]): ConfigParser[A :: L] = that.map2(self) { (a, l) => a :: l }.withToString(s"($that :: $self)")
+    def ::[A](that: ConfigParser[A]): ConfigParser[A #: L] = that.map2(self) { (a, l) => a :: l }.withToString(s"($that :: $self)")
   }
 
   /** Supports `::` syntax. */
@@ -601,7 +634,7 @@ object ConfigParser {
      * @param that element parser to extend with
      * @return new parser
      */
-    def ::[B](that: ConfigParser[B]): ConfigParser[B :: A :: HNil] = that :: self.mapPreservingToString(_ :: HNil)
+    def ::[B](that: ConfigParser[B]): ConfigParser[B #: A #: HNil] = that :: self.mapPreservingToString(_ :: HNil)
   }
 
   /** Supports `as` syntax. */

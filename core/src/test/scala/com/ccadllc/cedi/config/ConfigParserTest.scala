@@ -19,6 +19,7 @@ import scala.concurrent.duration._
 
 import com.typesafe.config.{ Config, ConfigFactory, ConfigOriginFactory }
 import org.scalatest.{ Matchers, WordSpec }
+import cats.data._
 
 case class AddressAndPort(address: String, port: Int)
 object AddressAndPort {
@@ -85,6 +86,26 @@ class ConfigParserTest extends WordSpec with Matchers {
           ConfigError.BadValue(ConfigKey.Relative("counts[2]"), "invalid integer: asdf", Some(ConfigOriginFactory.newSimple("String").withLineNumber(1))),
           ConfigError.BadValue(ConfigKey.Relative("counts[4]"), "invalid integer: fdsa", Some(ConfigOriginFactory.newSimple("String").withLineNumber(1)))
         ))
+    }
+
+    "support non-empty list" in {
+      val loi = { cpl: String => ConfigParser.intList(cpl) }
+
+      ConfigParser.nonEmptyList[Int]("counts")(loi).parse(ConfigFactory.parseString("counts: [1, 2, 3, 4, 5]")) shouldBe Right(NonEmptyList(1, List(2, 3, 4, 5)))
+
+      ConfigParser.nonEmptyList[Int]("counts")(loi).parse(ConfigFactory.parseString("counts: [1]")) shouldBe Right(NonEmptyList(1, List.empty))
+
+      ConfigParser.nonEmptyList[Int]("counts")(loi).parse(ConfigFactory.parseString("counts: []")) shouldBe Left(ConfigErrors.of(ConfigError.WrongType(ConfigKey.Relative("counts"), "expected non-empty list", None)))
+    }
+
+    "support non-empty vector" in {
+      val voi = { cpl: String => ConfigParser.intList(cpl).map { _.toVector } }
+
+      ConfigParser.nonEmptyVector[Int]("counts")(voi).parse(ConfigFactory.parseString("counts: [1, 2, 3, 4, 5]")) shouldBe Right(NonEmptyVector(1, Vector(2, 3, 4, 5)))
+
+      ConfigParser.nonEmptyVector[Int]("counts")(voi).parse(ConfigFactory.parseString("counts: [1]")) shouldBe Right(NonEmptyVector(1, Vector.empty))
+
+      ConfigParser.nonEmptyVector[Int]("counts")(voi).parse(ConfigFactory.parseString("counts: []")) shouldBe Left(ConfigErrors.of(ConfigError.WrongType(ConfigKey.Relative("counts"), "expected non-empty vector", None)))
     }
 
     "provides a humanized summary of config errors" in {

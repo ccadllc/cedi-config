@@ -14,7 +14,7 @@ objects to application specific types. The differentiating features of this libr
  - errors in the configuration are returned as values -- exceptions are never thrown
  - all errors present in the configuration are reported, not just the first error that is encountered
  - configuration parsers can be built manually or derived automatically from the structure of application specific types
- - limited dependencies -- only Typesafe Config and Shapeless
+ - limited dependencies -- only Typesafe Config, Shapeless, and Cats
 
 Example of usage:
 
