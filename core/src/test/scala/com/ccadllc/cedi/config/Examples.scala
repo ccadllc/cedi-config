@@ -61,8 +61,7 @@ object Examples extends App {
        |    port: 443
        |    client-auth: want
        |  }
-       |]""".stripMargin
-  ))
+       |]""".stripMargin))
 
   println(result)
 }

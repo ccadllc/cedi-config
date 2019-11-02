@@ -225,7 +225,7 @@ object ConfigParser {
 
   /**
    * Creates a parser from the supplied function.
-   * Consider using [[apply]] instead in order to get a useful `toString` method.
+   * Consider using `ConfigParser[A](String)(Config => Either[ConfigErrors, A])` instead in order to get a useful `toString` method.
    *
    * @param f function to lift to a parser
    * @return new parser
@@ -727,8 +727,7 @@ object ConfigParser {
               }
               ConfigParser.anonymous { _ => Left(ConfigErrors.of(err)) }
           }
-        }
-      )
+        })
     }
   }
 
@@ -799,7 +798,7 @@ object ConfigParser {
   /** Companion for [[DiscriminatorValue]]. */
   object DiscriminatorValue {
     /** Constructs a discriminator value that always returns the supplied value. */
-    def apply[A](value: String) = new DiscriminatorValue[A] { def apply(tpe: Symbol) = value }
+    def apply[A](value: String): DiscriminatorValue[A] = new DiscriminatorValue[A] { def apply(tpe: Symbol) = value }
 
     /** Discriminator value that uses the name of the data constructor class, converted to lower-case-with-dashes format. */
     implicit def default[A]: DiscriminatorValue[A] = new DiscriminatorValue[A] {
@@ -816,9 +815,9 @@ object ConfigParser {
 
   private[config] sealed trait DerivedConfigFieldParserLowPriority0 {
     implicit def fromImplicitDerivedConfigParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[A] =
-      DerivedConfigFieldParser(key ⇒ subconfig(key)(parser.value.parser.as[A]))
+      DerivedConfigFieldParser(key => subconfig(key)(parser.value.parser.as[A]))
     implicit def fromListImplicitGenericDerivedParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[List[A]] =
-      DerivedConfigFieldParser(key ⇒ list(key)(parser.value.parser.as[A]))
+      DerivedConfigFieldParser(key => list(key)(parser.value.parser.as[A]))
     implicit def fromVectorImplicitGenericDerivedParser[A, Repr](implicit lg: LabelledGeneric.Aux[A, Repr], t: Typeable[A], parser: Lazy[DerivedConfigParser[Repr]]): DerivedConfigFieldParser[Vector[A]] =
       DerivedConfigFieldParser(key => vector(key)(parser.value.parser.as[A]))
   }
