@@ -17,3 +17,6 @@ target
 *.log
 *.swp
 *~
+.metals
+project/.bloop
+

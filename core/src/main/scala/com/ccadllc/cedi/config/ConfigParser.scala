@@ -334,11 +334,11 @@ object ConfigParser {
     ConfigParser("failed") { _ => Left(ConfigErrors.of(error)) }
 
   /**
-    * Creates a parser that ignores the `Config` object and always returns the supplied error list.
-    *
-    * @param errors the errors to be returned
-    * @return a failed parser
-    */
+   * Creates a parser that ignores the `Config` object and always returns the supplied error list.
+   *
+   * @param errors the errors to be returned
+   * @return a failed parser
+   */
   def failed(errors: ConfigErrors): ConfigParser[Nothing] =
     ConfigParser("failed") { _ => Left(errors) }
 
@@ -727,8 +727,7 @@ object ConfigParser {
               }
               ConfigParser.anonymous { _ => Left(ConfigErrors.of(err)) }
           }
-        }
-      )
+        })
     }
   }
 
