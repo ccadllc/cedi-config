@@ -118,7 +118,7 @@ class ConfigParserTest extends AnyWordSpec with Matchers {
 
     "report origin information in errors" in {
       val result = wibbleParser.under("wibble").parse(ConfigFactory.load())
-      result shouldBe 'left
+      result shouldBe Symbol("left")
       val err = result.fold(_.head, _ => sys.error("should have been a failure"))
       err.origin.map(_.description).getOrElse("") should include("application.conf: 3")
     }
