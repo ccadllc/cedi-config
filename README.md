@@ -226,10 +226,10 @@ The `type` field acts as a *discriminator* -- a value used to determine which da
 
 ### <a id="getit"></a>How to get latest Version
 
-Cedi Config supports Scala 2.11 and 2.12. It is published to Maven Central.
+Cedi Config supports Scala 2.11, 2.12, and 2.13. It is published to Maven Central.
 
 ```scala
-libraryDependencies += "com.ccadllc.cedi" %% "config" % "1.1.0"
+libraryDependencies += "com.ccadllc.cedi" %% "config" % "1.2.0"
 ```
 
 ## Copyright and License

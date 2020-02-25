@@ -18,7 +18,8 @@ package com.ccadllc.cedi.config
 import scala.concurrent.duration._
 
 import com.typesafe.config.{ Config, ConfigFactory, ConfigOriginFactory }
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 case class AddressAndPort(address: String, port: Int)
 object AddressAndPort {
@@ -33,7 +34,7 @@ object AddressAndPort {
   }
 }
 
-class ConfigParserTest extends WordSpec with Matchers {
+class ConfigParserTest extends AnyWordSpec with Matchers {
 
   "the safe config extensions" should {
     val testOrigin = Some(ConfigOriginFactory.newSimple("hardcoded value"))
@@ -57,8 +58,7 @@ class ConfigParserTest extends WordSpec with Matchers {
       wibbleParser.parse(config("name" -> "foo", "count" -> "4")) shouldBe Right(Wibble("foo", 4))
       wibbleParser.parse(config()) shouldBe Left(ConfigErrors.of(
         ConfigError.Missing(ConfigKey.Relative("name")),
-        ConfigError.Missing(ConfigKey.Relative("count"))
-      ))
+        ConfigError.Missing(ConfigKey.Relative("count"))))
     }
 
     "support optional keys" in {
@@ -71,8 +71,7 @@ class ConfigParserTest extends WordSpec with Matchers {
         Right(AddressAndPort("127.0.0.1", 5555))
       ConfigParser.fromString("server")(AddressAndPort.fromString).parse(config("server" -> "127.0.0.1")) shouldBe
         Left(ConfigErrors.of(
-          ConfigError.BadValue(ConfigKey.Relative("server"), "invalid syntax: must be address:port", testOrigin)
-        ))
+          ConfigError.BadValue(ConfigKey.Relative("server"), "invalid syntax: must be address:port", testOrigin)))
     }
 
     "support string lists" in {
@@ -83,23 +82,20 @@ class ConfigParserTest extends WordSpec with Matchers {
       ConfigParser.fromStringList[Int]("counts")(itoa).parse(ConfigFactory.parseString("counts: [1, 2, asdf, 4, fdsa]")) shouldBe
         Left(ConfigErrors.of(
           ConfigError.BadValue(ConfigKey.Relative("counts[2]"), "invalid integer: asdf", Some(ConfigOriginFactory.newSimple("String").withLineNumber(1))),
-          ConfigError.BadValue(ConfigKey.Relative("counts[4]"), "invalid integer: fdsa", Some(ConfigOriginFactory.newSimple("String").withLineNumber(1)))
-        ))
+          ConfigError.BadValue(ConfigKey.Relative("counts[4]"), "invalid integer: fdsa", Some(ConfigOriginFactory.newSimple("String").withLineNumber(1)))))
     }
 
     "provides a humanized summary of config errors" in {
       val errors = ConfigErrors.of(
         ConfigError.WrongType(ConfigKey.Relative("connection.server"), "invalid syntax: must be address:port", testOrigin),
         ConfigError.Missing(ConfigKey.Relative("connection.path")),
-        ConfigError.WrongType(ConfigKey.Relative("id"), "expected int value", testOrigin)
-      )
+        ConfigError.WrongType(ConfigKey.Relative("id"), "expected int value", testOrigin))
 
       errors.description shouldBe (
         """|Failed to parse configuration.
            |  Wrong type for key connection.server - invalid syntax: must be address:port (hardcoded value).
            |  No value for required key connection.path.
-           |  Wrong type for key id - expected int value (hardcoded value).""".stripMargin
-      )
+           |  Wrong type for key id - expected int value (hardcoded value).""".stripMargin)
     }
 
     "support sub-configurations" in {
@@ -107,14 +103,12 @@ class ConfigParserTest extends WordSpec with Matchers {
       nestedWibbleParser.parse(config("wibble.name" -> "foo", "wibble.count" -> "4")) shouldBe Right(Wibble("foo", 4))
       nestedWibbleParser.parse(config()) shouldBe Left(ConfigErrors.of(
         ConfigError.Missing(ConfigKey.Relative("wibble.name")),
-        ConfigError.Missing(ConfigKey.Relative("wibble.count"))
-      ))
+        ConfigError.Missing(ConfigKey.Relative("wibble.count"))))
 
       val strictNestedWibbleParser = wibbleParser.under("wibble", failFast = true)
       strictNestedWibbleParser.parse(config("wibble.name" -> "foo", "wibble.count" -> "4")) shouldBe Right(Wibble("foo", 4))
       strictNestedWibbleParser.parse(config()) shouldBe Left(ConfigErrors.of(
-        ConfigError.Missing(ConfigKey.Relative("wibble"))
-      ))
+        ConfigError.Missing(ConfigKey.Relative("wibble"))))
     }
 
     "report type mismatch when a subconfig parser parses a scalar value" in {
@@ -137,8 +131,7 @@ class ConfigParserTest extends WordSpec with Matchers {
       }
       p.parse(config()) shouldBe Left(ConfigErrors.of(
         ConfigError.Missing(ConfigKey.Relative("foo.bar")),
-        ConfigError.Missing(ConfigKey.Absolute("baz"))
-      ))
+        ConfigError.Missing(ConfigKey.Absolute("baz"))))
     }
 
     "support derivation" which {
@@ -171,8 +164,7 @@ class ConfigParserTest extends WordSpec with Matchers {
              |  }
              |]
              |id: 42
-             |""".stripMargin
-        )) shouldBe
+             |""".stripMargin)) shouldBe
           Right(AppSettings(List(ServerSettings(AddressAndPort("localhost", 5555), "/foo", Some(30.seconds))), 42))
 
         appSettingsParser.parse(ConfigFactory.parseString(
@@ -183,20 +175,17 @@ class ConfigParserTest extends WordSpec with Matchers {
              |  }
              |]
              |id: 42
-             |""".stripMargin
-        )) shouldBe
+             |""".stripMargin)) shouldBe
           Right(AppSettings(List(ServerSettings(AddressAndPort("localhost", 5555), "/foo", None)), 42))
 
         appSettingsParser.parse(ConfigFactory.parseString(
           """|connections: [ { server: asdf } ]
              |id: asdf
-             |""".stripMargin
-        )) shouldBe
+             |""".stripMargin)) shouldBe
           Left(ConfigErrors.of(
             ConfigError.BadValue(ConfigKey.Relative("connections[0].server"), "invalid syntax: must be address:port", Some(ConfigOriginFactory.newSimple("String").withLineNumber(1))),
             ConfigError.Missing(ConfigKey.Relative("connections[0].path")),
-            ConfigError.WrongType(ConfigKey.Relative("id"), "expected int", Some(ConfigOriginFactory.newSimple("String").withLineNumber(2)))
-          ))
+            ConfigError.WrongType(ConfigKey.Relative("id"), "expected int", Some(ConfigOriginFactory.newSimple("String").withLineNumber(2)))))
       }
 
       "supports full derivation of nested case classes" in {
@@ -218,9 +207,7 @@ class ConfigParserTest extends WordSpec with Matchers {
               |  }
               |]
               |wobbles.string = "goodbye"
-            """.stripMargin
-          )
-        ) shouldBe Right(Both(Vector(Wibble("hello", 7), Wibble("world", 6)), Some(Wobble("goodbye"))))
+            """.stripMargin)) shouldBe Right(Both(Vector(Wibble("hello", 7), Wibble("world", 6)), Some(Wobble("goodbye"))))
       }
 
       "supports derivation of ADTs" which {
@@ -234,17 +221,13 @@ class ConfigParserTest extends WordSpec with Matchers {
             ConfigFactory.parseString(
               """|type: http-connector
                  |port: 8080
-                 |""".stripMargin
-            )
-          ) shouldBe Right(HttpConnector(8080))
+                 |""".stripMargin)) shouldBe Right(HttpConnector(8080))
           parser.parse(
             ConfigFactory.parseString(
               """|type: https-connector
                  |port: 8080
                  |ssl-context-name: default
-                 |""".stripMargin
-            )
-          ) shouldBe Right(HttpsConnector(8080, "default"))
+                 |""".stripMargin)) shouldBe Right(HttpsConnector(8080, "default"))
         }
 
         "tries each subtype parser in succession when type is unspecified" in {
