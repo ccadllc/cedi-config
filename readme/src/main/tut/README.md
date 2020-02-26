@@ -4,7 +4,7 @@ Quick links:
 
 - [About the library](#about)
 - [How to get latest version](#getit)
-- [API Docs](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/config_2.12/1.1.0/config_2.12-1.1.0-javadoc.jar/!/com/ccadllc/cedi/config/index.html)
+- [API Docs](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/config_2.12/1.2.0/config_2.12-1.2.0-javadoc.jar/!/com/ccadllc/cedi/config/index.html)
 
 ### <a id="about"></a>About the library
 
@@ -194,7 +194,7 @@ The `type` field acts as a *discriminator* -- a value used to determine which da
 Cedi Config supports Scala 2.11 and 2.12. It is published to Maven Central.
 
 ```scala
-libraryDependencies += "com.ccadllc.cedi" %% "config" % "1.1.0"
+libraryDependencies += "com.ccadllc.cedi" %% "config" % "1.2.0"
 ```
 
 ## Copyright and License
