@@ -10,7 +10,8 @@ lazy val commonSettings = Seq(
   scalacOptions in (Compile, console) ~= (_ filterNot Set("-Xfatal-warnings", "-Ywarn-unused-import").contains),
   contributors ++= Seq(
     Contributor("mpilquist", "Michael Pilquist")
-  )
+  ),
+  releaseCrossBuild := true
 )
 
 lazy val root = project.in(file(".")).aggregate(core).settings(commonSettings).settings(noPublish)
