@@ -1,7 +1,7 @@
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-config",
-  crossScalaVersions := Seq("2.13.1", "2.12.10", "2.11.12"),
+  crossScalaVersions := Seq("2.13.10", "2.12.10", "2.11.12"),
   scalacOptions --= Seq("-Ywarn-unused-import", "-Xfuture"),
   scalacOptions ++= Seq("-language:higherKinds") ++ (CrossVersion.partialVersion(scalaBinaryVersion.value) match {
      case Some((2, v)) if v <= 12 => Seq("-Xfuture", "-Ywarn-unused-import", "-Ypartial-unification", "-Yno-adapted-args")
