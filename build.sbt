@@ -21,7 +21,7 @@ lazy val core = project.in(file("core")).enablePlugins(SbtOsgi).
   settings(
     name := "config",
     libraryDependencies ++= Seq(
-      "com.typesafe" % "config" % "1.4.0",
+      "com.typesafe" % "config" % "1.4.3",
       "com.chuusai" %% "shapeless" % "2.3.3",
       "org.scalatest" %% "scalatest" % "3.1.1" % "test"
     ),
